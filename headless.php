@@ -66,7 +66,7 @@ use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 $myUpdateChecker = PucFactory::buildUpdateChecker(
     'https://raw.githubusercontent.com/veltany/headless-api-manager/main/release.json',
     __FILE__,
-    'headless-api'
+    'headless-api-manager'
 );
 
 

@@ -23,24 +23,6 @@ define('HRAM_API_ROUTE', 'wp/v2/headless-api');
 define('HRAM_DEBUG_MODE', true);
 
 
-//-------------------------------------
-// PLUGIN UPDATES
-require HEADLESS_API_PATH . 'plugin-update/plugin-update-checker.php';
-
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
-
-$myUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://raw.githubusercontent.com/veltany/headless-api-manager/main/release.json',
-    __FILE__,
-    'headless-api-manager'
-);
-
-$myUpdateChecker->setBranch('main');
-
-//Optional: If you're using a private repository, specify the access token like this:
-$myUpdateChecker->setAuthentication('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');
-//------------------------------------
-
 
 
 //Temporary logging
@@ -72,6 +54,20 @@ require_once HEADLESS_API_PATH . 'includes/frontend-redirect.php';
 require_once HEADLESS_API_PATH . 'includes/custom_rest_fields.php';
 require_once HEADLESS_API_PATH . 'includes/headless-kv-cache.php';
 require_once HEADLESS_API_PATH . 'includes/headless-analytics.php';
+
+
+//-------------------------------------
+// PLUGIN UPDATES
+ require HEADLESS_API_PATH . 'plugin-update/plugin-update-checker.php';
+
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+ hram_log(__FILE__);
+
+$myUpdateChecker = PucFactory::buildUpdateChecker(
+    'https://raw.githubusercontent.com/veltany/headless-api-manager/main/release.json',
+    __FILE__,
+    'headless-api'
+);
 
 
 

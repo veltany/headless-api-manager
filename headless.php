@@ -29,7 +29,7 @@ require HEADLESS_API_PATH.'plugin-update/plugin-update-checker.php';
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 $myUpdateChecker = PucFactory::buildUpdateChecker(
-	'https://github.com/veltany/downloads',
+	'https://github.com/veltany/headless-api-manager',
 	 HEADLESS_API_PATH.'headless.php', //Full path to the main plugin file or functions.php.,
 	'headless-api-manager'
 );

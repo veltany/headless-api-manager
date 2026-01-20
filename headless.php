@@ -4,6 +4,14 @@
  * Description: Lightweight REST API endpoints for headless WordPress frontends.
  * Version: 1.0.0
  * Author: Engr Sam Chukwu
+ * Version: 1.2.0
+ * License: GPL2
+ * Text Domain: hram
+ * Author URI: https://github.com/veltany 
+ * GitHub Plugin URI: https://github.com/veltany/headless-api-manager
+ * GitHub Branch: main
+ * Requires at least: 6.6
+ * Requires PHP: 8.2
  */
 
 if (!defined('ABSPATH')) {

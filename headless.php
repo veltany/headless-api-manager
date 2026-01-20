@@ -25,17 +25,16 @@ define('HRAM_DEBUG_MODE', true);
 
 //-------------------------------------
 // PLUGIN UPDATES
-require HEADLESS_API_PATH.'plugin-update/plugin-update-checker.php';
+require HEADLESS_API_PATH . 'plugin-update/plugin-update-checker.php';
+
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 $myUpdateChecker = PucFactory::buildUpdateChecker(
-	'https://raw.githubusercontent.com/veltany/headless-api-manager/main/release.json',
-	 HEADLESS_API_PATH.'headless.php', //Full path to the main plugin file or functions.php.,
-	'headless-api-manager'
+    'https://raw.githubusercontent.com/veltany/headless-api-manager/main/release.json',
+    __FILE__,
+    'headless-api-manager'
 );
 
-//$myUpdateChecker->getVcsApi()->enableReleaseAssets();
-//Set the branch that contains the stable release.
 $myUpdateChecker->setBranch('main');
 
 //Optional: If you're using a private repository, specify the access token like this:

@@ -11,11 +11,10 @@
   "sections": {
     "description": "Lightweight REST API endpoints for headless WordPress frontends.",
     "changelog": "
-    <ul>
-    <li>Improved performance</li>
-    <li>Bug fixes</li>
-    <li>New features: Trending recommendations </li>
-   </ul>
-   "
+<ul>
+<li>Improved performance</li>
+<li>Bug fixes</li>
+<li>New features: Trending recommendations </li>
+</ul>"
   }
 }

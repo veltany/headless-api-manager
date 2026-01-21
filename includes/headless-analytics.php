@@ -175,7 +175,7 @@ function hram_rollup_hourly_events() {
         CASE event
           WHEN 'play' THEN 1
           WHEN 'play_progress_50' THEN 2
-          WHEN 'play_complete' THEN 4
+          WHEN 'play_complete' THEN 3
           WHEN 'song_add_to_playlist' THEN 4
            WHEN 'song_download' THEN 4
           ELSE 0
@@ -256,6 +256,7 @@ function hram_recommend_by_session(WP_REST_Request $request) {
 
   $session_id = sanitize_text_field($request->get_param('session_id'));
   $limit      = min(50, max(1, intval($request->get_param('limit') ?? 20)));
+  $excludeIds = hram_parse_exclude_ids($request);
 
   if (!$session_id) {
     return new WP_REST_Response([
@@ -263,6 +264,8 @@ function hram_recommend_by_session(WP_REST_Request $request) {
       'message' => 'session_id is required'
     ], 400);
   }
+
+  $excludeSql = hram_build_not_in_clause($excludeIds, 's.song_id');
 
   $sql = "
     SELECT
@@ -276,6 +279,7 @@ function hram_recommend_by_session(WP_REST_Request $request) {
     LEFT JOIN " . HRAM_SONG_STATS_TABLE . " st
       ON s.song_id = st.song_id
     WHERE s.session_id = %s
+      {$excludeSql}
     GROUP BY s.song_id
     ORDER BY rank_score DESC
     LIMIT %d
@@ -461,6 +465,72 @@ function hram_recommend_for_you(WP_REST_Request $request) {
     'data' => $results,
   ];
 }
+
+//---------------------------------------------------
+add_action('rest_api_init', function () {
+  register_rest_route(HRAM_API_ROUTE, '/recommend/trending', [
+    'methods'  => 'GET',
+    'callback' => 'hram_recommend_trending',
+    'permission_callback' => '__return_true',
+  ]);
+});
+function hram_recommend_trending(WP_REST_Request $request) {
+  global $wpdb;
+
+  $limit      = min(50, max(1, intval($request->get_param('limit') ?? 20)));
+  $excludeIds = hram_parse_exclude_ids($request);
+
+  // Optional time window (seconds)
+  // example: ?since=86400 (last 24h)
+  $since = intval($request->get_param('since'));
+
+  $excludeSql = hram_build_not_in_clause($excludeIds, 'ss.song_id');
+  $timeSql    = $since > 0
+    ? $wpdb->prepare(" AND ss.updated_at >= %d", time() - $since)
+    : '';
+
+  /**
+   * Freshness-aware trending score
+   */
+  $sql = "
+    SELECT
+      ss.song_id,
+
+      (
+        ss.score *
+        CASE
+          WHEN ss.updated_at >= UNIX_TIMESTAMP() - 21600 THEN 1.0   -- 6h
+          WHEN ss.updated_at >= UNIX_TIMESTAMP() - 86400 THEN 0.7   -- 24h
+          WHEN ss.updated_at >= UNIX_TIMESTAMP() - 259200 THEN 0.4  -- 3 days
+          ELSE 0.2
+        END
+      ) AS rank_score
+
+    FROM " . HRAM_SONG_STATS_TABLE . " ss
+
+    WHERE ss.score > 0
+      {$excludeSql}
+      {$timeSql}
+
+    ORDER BY rank_score DESC
+    LIMIT %d
+  ";
+
+  $results = $wpdb->get_results(
+    $wpdb->prepare($sql, $limit),
+    ARRAY_A
+  );
+
+  return [
+    'success' => true,
+    'source'  => 'trending',
+    'data'    => $results
+  ];
+}
+
+//---------------------------------------------------
+
+
 
 
 

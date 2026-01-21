@@ -59,7 +59,7 @@ require_once HEADLESS_API_PATH . 'includes/headless-analytics.php';
  require HEADLESS_API_PATH . 'plugin-update/plugin-update-checker.php';
 
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
- hram_log(__FILE__);
+
 
 $myUpdateChecker = PucFactory::buildUpdateChecker(
     'https://raw.githubusercontent.com/veltany/headless-api-manager/main/release.json',

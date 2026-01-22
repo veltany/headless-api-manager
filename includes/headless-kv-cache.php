@@ -2,7 +2,7 @@
 
 // Register route
 add_action('rest_api_init', function () {
-    register_rest_route('headless-cache/v1', '/get', [
+    register_rest_route(HRAM_API_ROUTE, '/kv/get', [
         'methods' => 'GET',
         'callback' => function ($req) {
             $key = sanitize_text_field($req->get_param('key'));
@@ -22,7 +22,7 @@ add_action('rest_api_init', function () {
 
 // set cache
 add_action('rest_api_init', function () {
-    register_rest_route('headless-cache/v1', '/set', [
+    register_rest_route(HRAM_API_ROUTE, '/kv/set', [
         'methods' => 'POST',
         'callback' => function ($req) {
             $key = sanitize_text_field($req->get_param('key'));
@@ -58,10 +58,15 @@ function hkvc_get($key) {
     );
 
     if (!$row) return null;
-    if (time() > intval($row->expires_at)) return null;
+
+    if (time() > intval($row->expires_at)) {
+        hkvc_delete($key); // lazy cleanup
+        return null;
+    }
 
     return json_decode($row->cache_value, true);
 }
+
 
 /**
  * Set cache value
@@ -131,7 +136,38 @@ add_action('edited_terms', function () {
     hkvc_delete_by_tag('taxonomy');
 });
 
+// Clear cache when menus or logo change:
+add_action('wp_update_nav_menu', function () {
+  delete_transient('headless_api_menu_primary');
+  delete_transient('headless_api_menu_footer');
+  hkvc_delete_by_tag('menu');
+});
 
+add_action('customize_save_after', function () {
+  delete_transient('headless_api_site_logo');
+    hkvc_delete_by_tag('site-logo');
+});
+
+
+ //------------------
+ add_action('hram_kv_cleanup', 'hkvc_cleanup_expired_cache');
+function hkvc_cleanup_expired_cache() {
+    global $wpdb;
+
+    $now = time();
+
+    // Delete expired cache entries
+    $deleted = $wpdb->query(
+        $wpdb->prepare(
+            "DELETE FROM " . HRAM_KV_TABLE . " WHERE expires_at < %d",
+            $now
+        )
+    );
+
+    if ($deleted !== false && $deleted > 0) {
+        hram_log("KV cleanup: removed {$deleted} expired cache rows.");
+    }
+}
 
 
 

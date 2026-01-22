@@ -530,6 +530,61 @@ function hram_recommend_trending(WP_REST_Request $request) {
 
 //---------------------------------------------------
 
+add_action('hram_daily_session_cleanup', 'hram_cleanup_abandoned_sessions');
+function hram_cleanup_abandoned_sessions() {
+  global $wpdb;
+
+  $threshold = time() - HRAM_SESSION_TTL;
+
+  /**
+   * 1. Find dead session_ids
+   * - guest only
+   * - inactive
+   */
+  $dead_sessions = $wpdb->get_col(
+    $wpdb->prepare("
+      SELECT DISTINCT session_id
+      FROM " . HRAM_SESSION_AFFINITY_TABLE . "
+      WHERE last_interaction < %d
+    ", $threshold)
+  );
+
+  if (empty($dead_sessions)) {
+    hram_log('Session cleanup: nothing to clean.');
+    return;
+  }
+
+  $placeholders = implode(',', array_fill(0, count($dead_sessions), '%s'));
+
+  /**
+   * 2. Delete session affinity rows
+   */
+  $wpdb->query(
+    $wpdb->prepare("
+      DELETE FROM " . HRAM_SESSION_AFFINITY_TABLE . "
+      WHERE session_id IN ($placeholders)
+    ", ...$dead_sessions)
+  );
+
+  /**
+   * 3. (Optional but recommended)
+   * Delete old analytics events for dead sessions
+   */
+  $wpdb->query(
+    $wpdb->prepare("
+      DELETE FROM " . HRAM_ANALYTICS_TABLE . "
+      WHERE session_id IN ($placeholders)
+        AND timestamp < %d
+    ", ...array_merge($dead_sessions, [$threshold]))
+  );
+
+  hram_log(
+    sprintf(
+      'Session cleanup: removed %d abandoned sessions.',
+      count($dead_sessions)
+    )
+  );
+}
 
 
 

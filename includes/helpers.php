@@ -40,15 +40,7 @@ function headless_api_get_menu_id($location) {
   return $locations[$location] ?? null;
 }
 
-// Clear cache when menus or logo change:
-add_action('wp_update_nav_menu', function () {
-  delete_transient('headless_api_menu_primary');
-  delete_transient('headless_api_menu_footer');
-});
 
-add_action('customize_save_after', function () {
-  delete_transient('headless_api_site_logo');
-});
 
 
 
@@ -59,10 +51,18 @@ add_action('rest_api_init', function () {
 });
 
 function headless_api_send_cors_headers($served, $result, $request, $server) {
-  $origin = get_http_origin();
+
+$allowed_origins = [
+    HRAM_FRONTEND_URL,
+    'http://localhost:3000',
+     "https://gospeljuice.net",
+    "https://gospeljuice.name.ng",
+    "http://gospeljuice.name.ng"
+];
+  $origin = isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins) ? $_SERVER['HTTP_ORIGIN'] : null;
 
   if ($origin) {
-    header('Access-Control-Allow-Origin: ' . esc_url_raw($origin));
+    header('Access-Control-Allow-Origin: ' . $origin);
     header('Access-Control-Allow-Credentials: true');
     header('Access-Control-Allow-Methods: GET, OPTIONS');
     header('Access-Control-Allow-Headers: Authorization, Content-Type');
@@ -197,7 +197,7 @@ function extract_audio_blocks(array $blocks, array &$audios) {
             ];
         }
 
-        // 🔁 RECURSION — THIS IS THE KEY
+        //  RECURSION — THIS IS THE KEY
         if (!empty($block['innerBlocks'])) {
             extract_audio_blocks($block['innerBlocks'], $audios);
         }
@@ -207,7 +207,7 @@ function extract_audio_blocks(array $blocks, array &$audios) {
 // add cors support
 function add_cors_http_header() {
     // Replace 'http://localhost:3000' with the exact URL and port of your frontend app
-    header("Access-Control-Allow-Origin: http://localhost:3000"); 
+    header("Access-Control-Allow-Origin: ". (defined('HRAM_FRONTEND_URL') ? HRAM_FRONTEND_URL : '*')); 
     header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
     header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
     header("Access-Control-Allow-Credentials: true"); // Needed if you use authentication (cookies, sessions)

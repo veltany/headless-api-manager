@@ -23,8 +23,12 @@ class HK_Object_Cache {
     /** Runtime (request-only) cache */
     private $local = [];
 
-    public function __construct() {
+     /** Debug mode */
+    private $debug = false;
+
+    public function __construct($debug = false) {
         $this->detect_backend();
+          $this->debug = $debug;
     }
 
     /**
@@ -39,6 +43,7 @@ class HK_Object_Cache {
                 if ($r->connect('127.0.0.1', 6379, 0.5)) {
                     $this->redis = $r;
                     $this->backend = 'redis';
+                    $this->log("Using Redis object cache");
                     return;
                 }
             } catch (\Throwable $e) {}
@@ -53,6 +58,7 @@ class HK_Object_Cache {
             if (!empty($stats)) {
                 $this->memcached = $m;
                 $this->backend = 'memcached';
+                $this->log("Using Memcached object cache");
                 return;
             }
         }
@@ -60,11 +66,23 @@ class HK_Object_Cache {
         /* ================= APCu ================= */
         if (function_exists('apcu_fetch') && ini_get('apc.enabled')) {
             $this->backend = 'apcu';
+            $this->log("Using APCu object cache");
             return;
         }
 
         /* ================= RUNTIME ONLY ================= */
         $this->backend = 'runtime';
+        $this->log("Using Runtime-only object cache");
+    }
+
+    /**
+     * Log message if debug mode is enabled
+     */
+    private function log($message) {
+        if ($this->debug) {
+            $message .= "\n";
+            error_log(current_time('mysql') . ": $message");
+        }
     }
 
     /**

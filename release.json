@@ -1,7 +1,7 @@
 {
   "name": "Headless API Manager",
   "slug": "headless-api-manager",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "download_url": "https://github.com/veltany/headless-api-manager/archive/refs/heads/main.zip",
   "requires": "6.6",
   "requires_php": "8.2",
@@ -10,6 +10,6 @@
   "homepage": "https://github.com/veltany/headless-api-manager",
   "sections": {
     "description": "Lightweight REST API endpoints for headless WordPress frontends.",
-    "changelog": "<ul>\n<li>Improved performance</li>\n<li>Bug fixes</li>\n<li>New features: Trending recommendations</li>\n<li>Fixed analytics logging and default debug mood.</li>\n</ul>"
+    "changelog": "<ul>\n<li>Improved performance</li>\n<li>Bug fixes</li>\n<li>New features: Trending recommendations</li>\n<li>Fixed analytics logging and default debug mood.</li>\n<li>Improved caching logic</li>\n</ul>"
   }
 }

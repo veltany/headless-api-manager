@@ -1,4 +1,52 @@
-<?php 
+<?php
+
+// ================================
+// INTERNAL TAG VERSIONING HELPERS
+// ================================
+
+function hkvc_tag_version_key($tag) {
+    return "hkvc:tagver:" . md5($tag);
+}
+
+function hkvc_get_tag_version($tag) {
+    $key = hkvc_tag_version_key($tag);
+
+    if (wp_using_ext_object_cache()) {
+        $v = wp_cache_get($key, 'hkvc');
+        if ($v !== false) return (int)$v;
+
+        wp_cache_set($key, 1, 'hkvc');
+        return 1;
+    }
+
+    // DB fallback
+    $v = hkvc_get($key, 'hkvc_tags');
+    if ($v !== null) return (int)$v;
+
+    hkvc_set($key, 1, DAY_IN_SECONDS * 30);
+    return 1;
+}
+
+function hkvc_bump_tag_version($tag) {
+    $key = hkvc_tag_version_key($tag);
+
+    if (wp_using_ext_object_cache()) {
+        $v = wp_cache_get($key, 'hkvc');
+        $v = ($v === false) ? 2 : $v + 1;
+        wp_cache_set($key, $v, 'hkvc');
+        return;
+    }
+
+    $v = hkvc_get($key, 'hkvc_tags');
+    hkvc_set($key, ($v ?? 1) + 1, DAY_IN_SECONDS * 30);
+}
+
+function hkvc_build_key($key, $group) {
+    return 'wp:' . get_current_blog_id() . ':' . $group . ':' . $key;
+}
+
+
+
 
 // Register route
 add_action('rest_api_init', function () {
@@ -47,7 +95,16 @@ add_action('rest_api_init', function () {
 /**
  * Get cache value
  */
-function hkvc_get($key) {
+function hkvc_get($key, $group = 'hkvc') {
+
+    $tag_version = hkvc_get_tag_version($group);
+    $key = hkvc_build_key("v{$tag_version}:{$key}", $group);
+
+    if (wp_using_ext_object_cache()) {
+        $value = wp_cache_get($key, $group);
+        return $value === false ? null : $value;
+    }
+
     global $wpdb;
 
     $row = $wpdb->get_row(
@@ -59,8 +116,8 @@ function hkvc_get($key) {
 
     if (!$row) return null;
 
-    if (time() > intval($row->expires_at)) {
-        hkvc_delete($key); // lazy cleanup
+    if (time() > (int)$row->expires_at) {
+        hkvc_delete($key);
         return null;
     }
 
@@ -72,6 +129,16 @@ function hkvc_get($key) {
  * Set cache value
  */
 function hkvc_set($key, $value, $ttl = 300, $tags = []) {
+
+    $group = 'hkvc';
+    $tag_version = hkvc_get_tag_version($group);
+    $key = hkvc_build_key("v{$tag_version}:{$key}", $group);
+
+    if (wp_using_ext_object_cache()) {
+        wp_cache_set($key, $value, $group, $ttl);
+        return;
+    }
+
     global $wpdb;
 
     $wpdb->query(
@@ -89,7 +156,7 @@ function hkvc_set($key, $value, $ttl = 300, $tags = []) {
             $key,
             wp_json_encode($value),
             wp_json_encode($tags),
-            time() + intval($ttl),
+            time() + (int)$ttl,
             time()
         )
     );
@@ -100,16 +167,29 @@ function hkvc_set($key, $value, $ttl = 300, $tags = []) {
  * Delete by key
  */
 function hkvc_delete($key) {
+    $group = 'hkvc';
+    $tag_version = hkvc_get_tag_version($group);
+    $key = hkvc_build_key("v{$tag_version}:{$key}", $group);
+
+    if (wp_using_ext_object_cache()) {
+        wp_cache_delete($key, $group);
+        return;
+    }
+
     global $wpdb;
     $wpdb->delete(HRAM_KV_TABLE, ['cache_key' => $key]);
 }
+
 
 /**
  * Delete by tag
  */
 function hkvc_delete_by_tag($tag) {
-    global $wpdb;
+    // Object cache-safe invalidation
+    hkvc_bump_tag_version($tag);
 
+    // DB cleanup is optional but keeps table lean
+    global $wpdb;
     $wpdb->query(
         $wpdb->prepare(
             "DELETE FROM " . HRAM_KV_TABLE . " WHERE cache_tags LIKE %s",
@@ -117,6 +197,7 @@ function hkvc_delete_by_tag($tag) {
         )
     );
 }
+
 
 
 
@@ -169,6 +250,46 @@ function hkvc_cleanup_expired_cache() {
     }
 }
 
+//------------------
+function hkvc_install_object_cache() {
+    $wp_content = WP_CONTENT_DIR;
+    $target     = $wp_content . '/object-cache.php';
+    $backup     = $wp_content . '/object-cache.php.bak';
+    $source     = plugin_dir_path(__FILE__) . 'object-cache.php';
 
+    // Ensure source exists
+    if (!file_exists($source)) {
+        return;
+    }
+
+    // Backup existing object cache
+    if (file_exists($target) && !file_exists($backup)) {
+        rename($target, $backup);
+    }
+
+    // Copy our object cache
+    copy($source, $target);
+
+    update_option('hkvc_object_cache_installed', true);
+}
+
+
+function hkvc_uninstall_object_cache() {
+    $wp_content = WP_CONTENT_DIR;
+    $target     = $wp_content . '/object-cache.php';
+    $backup     = $wp_content . '/object-cache.php.bak';
+
+    // Remove our cache
+    if (file_exists($target)) {
+        unlink($target);
+    }
+
+    // Restore previous cache if exists
+    if (file_exists($backup)) {
+        rename($backup, $target);
+    }
+
+    delete_option('hkvc_object_cache_installed');
+}
 
 

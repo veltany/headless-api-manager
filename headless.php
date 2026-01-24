@@ -3,7 +3,7 @@
  * Plugin Name: Headless API Manager
  * Description: Lightweight REST API endpoints for headless WordPress frontends.
  * Author: Engr Sam Chukwu
- * Version: 1.2.7
+ * Version: 1.2.8
  * License: GPL2
  * Text Domain: headless-api-manager
  * Author URI: https://github.com/veltany 
@@ -21,8 +21,8 @@ define('HEADLESS_API_PATH', plugin_dir_path(__FILE__));
 define('HRAM_PREFIX', 'HRAM');
 define('HRAM_API_ROUTE', 'wp/v2/headless-api'); 
 define('HRAM_DEBUG_MODE', false);
-define('HRAM_VERSION', '1.2.3');
-define('HRAM_FRONTEND_URL', "gospeljuice.net"); // set your frontend url here if needed
+define('HRAM_VERSION', '1.2.8');
+define('HRAM_FRONTEND_URL', 'https://gospeljuice.net'); // set your frontend url here if needed
 define('HRAM_SESSION_TTL', DAY_IN_SECONDS * 3); // 72 hours
 
 

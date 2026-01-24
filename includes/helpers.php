@@ -45,38 +45,38 @@ function headless_api_get_menu_id($location) {
 
 
 // Add CORS support
-add_action('rest_api_init', function () {
-  remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-  add_filter('rest_pre_serve_request', 'headless_api_send_cors_headers', 15, 4);
-});
+// KEEP THIS - This is the correct way for Headless WP
+// add_action('rest_api_init', function () {
+//     remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
+//     add_filter('rest_pre_serve_request', 'headless_api_send_cors_headers', 15, 4);
+// });
 
 function headless_api_send_cors_headers($served, $result, $request, $server) {
+    $allowed_origins = [
+        defined('HRAM_FRONTEND_URL') ? HRAM_FRONTEND_URL : '',
+        'http://localhost:3000',
+        "https://gospeljuice.net",
+        "https://gospeljuice.name.ng",
+        "http://gospeljuice.name.ng"
+    ];
 
-$allowed_origins = [
-    HRAM_FRONTEND_URL,
-    'http://localhost:3000',
-     "https://gospeljuice.net",
-    "https://gospeljuice.name.ng",
-    "http://gospeljuice.name.ng"
-];
-  $origin = isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins) ? $_SERVER['HTTP_ORIGIN'] : null;
+    $origin = get_http_origin(); 
 
-  if ($origin) {
-    header('Access-Control-Allow-Origin: ' . $origin);
-    header('Access-Control-Allow-Credentials: true');
-    header('Access-Control-Allow-Methods: GET, OPTIONS');
-    header('Access-Control-Allow-Headers: Authorization, Content-Type');
-  }
+    if (in_array($origin, $allowed_origins)) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Access-Control-Allow-Credentials: true');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+        header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce, X-Requested-With');
+        header('Vary: Origin'); 
+    }
 
-  // Handle preflight
-  if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
-    status_header(200);
-    exit;
-  }
+    if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
+        status_header(200);
+        exit;
+    }
 
-  return $served;
+    return $served;
 }
-
 
 
 
@@ -204,13 +204,4 @@ function extract_audio_blocks(array $blocks, array &$audios) {
     }
 }
 
-// add cors support
-function add_cors_http_header() {
-    // Replace 'http://localhost:3000' with the exact URL and port of your frontend app
-    header("Access-Control-Allow-Origin: ". (defined('HRAM_FRONTEND_URL') ? HRAM_FRONTEND_URL : '*')); 
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-    header("Access-Control-Allow-Credentials: true"); // Needed if you use authentication (cookies, sessions)
-}
-add_action('init', 'add_cors_http_header');
 

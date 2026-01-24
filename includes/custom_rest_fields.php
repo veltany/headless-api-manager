@@ -61,17 +61,7 @@ function get_post_audio_complete( $post ) {
         }
     }
 
-    // 4⃣ Attached audio files (fallback)
-    $attachments = get_children( array(
-        'post_parent'    => $post_id,
-        'post_type'      => 'attachment',
-        'post_mime_type' => 'audio',
-        'posts_per_page' => -1,
-    ) );
-
-    foreach ( $attachments as $attachment ) {
-        $add_audio( wp_get_attachment_url( $attachment->ID ) );
-    }
+   
 
     /**
      * Normalize & deduplicate

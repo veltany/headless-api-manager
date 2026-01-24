@@ -1,9 +1,9 @@
 <?php
+if (!defined('ABSPATH')) exit;
 
 // ================================
 // INTERNAL TAG VERSIONING HELPERS
 // ================================
-
 function hkvc_tag_version_key($tag) {
     return "hkvc:tagver:" . md5($tag);
 }
@@ -11,6 +11,7 @@ function hkvc_tag_version_key($tag) {
 function hkvc_get_tag_version($tag) {
     $key = hkvc_tag_version_key($tag);
 
+    // Try object cache first
     if (wp_using_ext_object_cache()) {
         $v = wp_cache_get($key, 'hkvc');
         if ($v !== false) return (int)$v;
@@ -23,32 +24,36 @@ function hkvc_get_tag_version($tag) {
     $v = hkvc_get($key, 'hkvc_tags');
     if ($v !== null) return (int)$v;
 
-    hkvc_set($key, 1, DAY_IN_SECONDS * 30);
+    // Initialize tag version in DB
+    hkvc_set($key, 1, DAY_IN_SECONDS * 30, ['tag-version']);
     return 1;
 }
 
 function hkvc_bump_tag_version($tag) {
     $key = hkvc_tag_version_key($tag);
 
+    // Object cache first
     if (wp_using_ext_object_cache()) {
         $v = wp_cache_get($key, 'hkvc');
         $v = ($v === false) ? 2 : $v + 1;
         wp_cache_set($key, $v, 'hkvc');
-        return;
     }
 
+    // DB fallback
     $v = hkvc_get($key, 'hkvc_tags');
-    hkvc_set($key, ($v ?? 1) + 1, DAY_IN_SECONDS * 30);
+    hkvc_set($key, ($v ?? 1) + 1, DAY_IN_SECONDS * 30, ['tag-version']);
 }
 
+// ================================
+// CACHE KEY BUILDER
+// ================================
 function hkvc_build_key($key, $group) {
     return 'wp:' . get_current_blog_id() . ':' . $group . ':' . $key;
 }
 
-
-
-
-// Register route
+// ================================
+// REST API ROUTES
+// ================================
 add_action('rest_api_init', function () {
     register_rest_route(HRAM_API_ROUTE, '/kv/get', [
         'methods' => 'GET',
@@ -60,27 +65,22 @@ add_action('rest_api_init', function () {
             if ($value === null) return ['hit' => false];
 
             return [
-                'hit' => true,
+                'hit'  => true,
                 'data' => $value
             ];
         },
         'permission_callback' => '__return_true',
     ]);
-});
 
-// set cache
-add_action('rest_api_init', function () {
     register_rest_route(HRAM_API_ROUTE, '/kv/set', [
         'methods' => 'POST',
         'callback' => function ($req) {
-            $key = sanitize_text_field($req->get_param('key'));
+            $key  = sanitize_text_field($req->get_param('key'));
             $data = $req->get_param('data');
             $ttl  = intval($req->get_param('ttl') ?? 300);
             $tags = $req->get_param('tags') ?? [];
 
-            if (!$key || $data === null) {
-                return ['stored' => false];
-            }
+            if (!$key || $data === null) return ['stored' => false];
 
             hkvc_set($key, $data, $ttl, $tags);
             return ['stored' => true];
@@ -89,28 +89,25 @@ add_action('rest_api_init', function () {
     ]);
 });
 
-
-
-
-/**
- * Get cache value
- */
+// ================================
+// CACHE OPERATIONS
+// ================================
 function hkvc_get($key, $group = 'hkvc') {
-
     $tag_version = hkvc_get_tag_version($group);
-    $key = hkvc_build_key("v{$tag_version}:{$key}", $group);
+    $full_key = hkvc_build_key("v{$tag_version}:{$key}", $group);
 
+    // Object cache first
     if (wp_using_ext_object_cache()) {
-        $value = wp_cache_get($key, $group);
-        return $value === false ? null : $value;
+        $value = wp_cache_get($full_key, $group);
+        if ($value !== false) return $value;
     }
 
+    // DB fallback
     global $wpdb;
-
     $row = $wpdb->get_row(
         $wpdb->prepare(
             "SELECT cache_value, expires_at FROM " . HRAM_KV_TABLE . " WHERE cache_key=%s",
-            $key
+            $full_key
         )
     );
 
@@ -124,36 +121,29 @@ function hkvc_get($key, $group = 'hkvc') {
     return json_decode($row->cache_value, true);
 }
 
-
-/**
- * Set cache value
- */
 function hkvc_set($key, $value, $ttl = 300, $tags = []) {
-
     $group = 'hkvc';
     $tag_version = hkvc_get_tag_version($group);
-    $key = hkvc_build_key("v{$tag_version}:{$key}", $group);
+    $full_key = hkvc_build_key("v{$tag_version}:{$key}", $group);
 
+    // Write to object cache if available
     if (wp_using_ext_object_cache()) {
-        wp_cache_set($key, $value, $group, $ttl);
-        return;
+        wp_cache_set($full_key, $value, $group, $ttl);
     }
 
+    // Always persist to DB for fallback
     global $wpdb;
-
     $wpdb->query(
         $wpdb->prepare(
-            "
-            INSERT INTO " . HRAM_KV_TABLE . "
+            "INSERT INTO " . HRAM_KV_TABLE . "
             (cache_key, cache_value, cache_tags, expires_at, updated_at)
             VALUES (%s, %s, %s, %d, %d)
             ON DUPLICATE KEY UPDATE
                 cache_value=VALUES(cache_value),
                 cache_tags=VALUES(cache_tags),
                 expires_at=VALUES(expires_at),
-                updated_at=VALUES(updated_at)
-            ",
-            $key,
+                updated_at=VALUES(updated_at)",
+            $full_key,
             wp_json_encode($value),
             wp_json_encode($tags),
             time() + (int)$ttl,
@@ -162,33 +152,26 @@ function hkvc_set($key, $value, $ttl = 300, $tags = []) {
     );
 }
 
-
-/**
- * Delete by key
- */
 function hkvc_delete($key) {
     $group = 'hkvc';
     $tag_version = hkvc_get_tag_version($group);
-    $key = hkvc_build_key("v{$tag_version}:{$key}", $group);
+    $full_key = hkvc_build_key("v{$tag_version}:{$key}", $group);
 
+    // Delete from object cache
     if (wp_using_ext_object_cache()) {
-        wp_cache_delete($key, $group);
-        return;
+        wp_cache_delete($full_key, $group);
     }
 
+    // Delete from DB
     global $wpdb;
-    $wpdb->delete(HRAM_KV_TABLE, ['cache_key' => $key]);
+    $wpdb->delete(HRAM_KV_TABLE, ['cache_key' => $full_key]);
 }
 
-
-/**
- * Delete by tag
- */
 function hkvc_delete_by_tag($tag) {
-    // Object cache-safe invalidation
+    // Invalidate object cache via tag version bump
     hkvc_bump_tag_version($tag);
 
-    // DB cleanup is optional but keeps table lean
+    // Optional DB cleanup to keep table lean
     global $wpdb;
     $wpdb->query(
         $wpdb->prepare(
@@ -198,46 +181,38 @@ function hkvc_delete_by_tag($tag) {
     );
 }
 
-
-
-
-// Automatic cache invalidation on content changes
+// ================================
+// AUTO CACHE INVALIDATION
+// ================================
 add_action('save_post', function ($post_id) {
     if (wp_is_post_revision($post_id)) return;
 
-    // Global content changed
     hkvc_delete_by_tag('global');
-
-    // Post-specific
     hkvc_delete_by_tag('post:' . $post_id);
-
 }, 10);
 
 add_action('edited_terms', function () {
     hkvc_delete_by_tag('taxonomy');
 });
 
-// Clear cache when menus or logo change:
 add_action('wp_update_nav_menu', function () {
-  delete_transient('headless_api_menu_primary');
-  delete_transient('headless_api_menu_footer');
-  hkvc_delete_by_tag('menu');
+    delete_transient('headless_api_menu_primary');
+    delete_transient('headless_api_menu_footer');
+    hkvc_delete_by_tag('menu');
 });
 
 add_action('customize_save_after', function () {
-  delete_transient('headless_api_site_logo');
+    delete_transient('headless_api_site_logo');
     hkvc_delete_by_tag('site-logo');
 });
 
-
- //------------------
- add_action('hram_kv_cleanup', 'hkvc_cleanup_expired_cache');
+// ================================
+// CLEANUP TASK
+// ================================
+add_action('hram_kv_cleanup', 'hkvc_cleanup_expired_cache');
 function hkvc_cleanup_expired_cache() {
     global $wpdb;
-
     $now = time();
-
-    // Delete expired cache entries
     $deleted = $wpdb->query(
         $wpdb->prepare(
             "DELETE FROM " . HRAM_KV_TABLE . " WHERE expires_at < %d",
@@ -249,6 +224,8 @@ function hkvc_cleanup_expired_cache() {
         hram_log("KV cleanup: removed {$deleted} expired cache rows.");
     }
 }
+// ================================
+// OBJECT CACHE INSTALLATION HELPERS
 
 //------------------
 function hkvc_install_object_cache() {

@@ -74,6 +74,8 @@ function get_post_audio_complete( $post ) {
     return array_map( function ( $url ) {
         return [
             'src' => $url,
+            "media_id" => attachment_url_to_postid( $url ),
+            "media_details" => wp_get_attachment_metadata( attachment_url_to_postid( $url ) ),
         ];
     }, $audio_urls );
 }

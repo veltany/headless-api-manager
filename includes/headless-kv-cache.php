@@ -232,10 +232,11 @@ function hkvc_install_object_cache() {
     $wp_content = WP_CONTENT_DIR;
     $target     = $wp_content . '/object-cache.php';
     $backup     = $wp_content . '/object-cache.php.bak';
-    $source     = plugin_dir_path(__FILE__) . 'object-cache.php';
+    $source     = HRAM_PATH . 'object-cache.php';
 
     // Ensure source exists
     if (!file_exists($source)) {
+        hram_log("HKVC installation failed: source $source not found.");
         return;
     }
 

@@ -3,7 +3,7 @@
  * Plugin Name: Headless API Manager
  * Description: Lightweight REST API endpoints for headless WordPress frontends.
  * Author: Engr Sam Chukwu
- * Version: 1.2.8
+ * Version: 1.2.9
  * License: GPL2
  * Text Domain: headless-api-manager
  * Author URI: https://github.com/veltany 
@@ -18,11 +18,12 @@ if (!defined('ABSPATH')) {
 }
 
 define('HEADLESS_API_PATH', plugin_dir_path(__FILE__));
+define('HRAM_PATH', plugin_dir_path(__FILE__));
 define('HRAM_PREFIX', 'HRAM');
 define('HRAM_API_ROUTE', 'wp/v2/headless-api'); 
 define('HRAM_DEBUG_MODE', false);
 define('HRAM_VERSION', '1.2.8');
-define('HRAM_FRONTEND_URL', 'https://gospeljuice.net'); // set your frontend url here if needed
+define('HRAM_FRONTEND_URL', get_home_url()); // set your frontend url here if needed
 define('HRAM_SESSION_TTL', DAY_IN_SECONDS * 3); // 72 hours
 
 
@@ -32,7 +33,7 @@ function hram_log($message)
 {
 if(!HRAM_DEBUG_MODE) return;
 
-$pluginlog = HEADLESS_API_PATH.'debug.log';  
+$pluginlog = HRAM_PATH.'debug.log';  
 $message.= "\n";
 error_log(current_time('mysql').": $message", 3, $pluginlog);
 }
@@ -158,14 +159,9 @@ CREATE TABLE ".HRAM_SESSION_AFFINITY_TABLE." (
   INDEX (song_id),
   INDEX (session_id)
 );
-
-
-
     
     "; 
     
-    
-
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
 });

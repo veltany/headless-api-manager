@@ -205,3 +205,32 @@ function extract_audio_blocks(array $blocks, array &$audios) {
 }
 
 
+
+// Modify audio player link to be external parked domain 
+
+function headless_modify_wp_audio_shortcode( $html, $atts, $audio, $post_id, $library ) {
+    
+ $host = HRAM_FRONTEND_URL;
+ $site_url = HRAM_FRONTEND_URL;
+ 
+ $link = $host;
+ $path = parse_url($atts['mp3']);
+ if(empty($path['path']))
+ { $path = parse_url($atts['src']);} 
+ 
+ $getpath = $path["path"];
+ 
+ 
+ $mp3link = 'https://gospeljuice.name.ng/'.$getpath; 
+ 
+ 
+ $html ='<div id="AUDIO_DOWNLOAD_SECTION"> <audio class="wp-audio-shortcode"  preload="none" style="width: 100%;" controls controlsList="nodownload" src="'.$mp3link.'" ><source type="audio/mpeg" src="'.$mp3link.'" /><a href="'.$mp3link.'">'.$mp3link.'</a></audio> </div>';
+  
+  
+ return $html ;
+
+}
+add_filter( 'wp_audio_shortcode','headless_modify_wp_audio_shortcode', 1, 5);
+
+
+

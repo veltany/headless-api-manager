@@ -1,5 +1,5 @@
 <?php
-/**
+/** BY: Headless API
  * Pure Object Cache (No DB Fallback)
  * Backends: Redis → Memcached → APCu → Runtime-only
  */
@@ -194,22 +194,22 @@ class HK_Object_Cache {
  * WordPress Required Wrapper Functions
  * ================================================== */
 
-function wp_cache_get($key, $group = 'default') {
-    global $wp_object_cache;
-    return $wp_object_cache->get($key, $group);
-}
+// function wp_cache_get($key, $group = 'default') {
+//     global $wp_object_cache;
+//     return $wp_object_cache->get($key, $group);
+// }
 
-function wp_cache_set($key, $value, $group = 'default', $ttl = 0) {
-    global $wp_object_cache;
-    return $wp_object_cache->set($key, $value, $group, $ttl);
-}
+// function wp_cache_set($key, $value, $group = 'default', $ttl = 0) {
+//     global $wp_object_cache;
+//     return $wp_object_cache->set($key, $value, $group, $ttl);
+// }
 
-function wp_cache_delete($key, $group = 'default') {
-    global $wp_object_cache;
-    return $wp_object_cache->delete($key, $group);
-}
+// function wp_cache_delete($key, $group = 'default') {
+//     global $wp_object_cache;
+//     return $wp_object_cache->delete($key, $group);
+// }
 
-function wp_cache_flush() {
-    global $wp_object_cache;
-    return $wp_object_cache->flush();
-}
+// function wp_cache_flush() {
+//     global $wp_object_cache;
+//     return $wp_object_cache->flush();
+// }

@@ -233,4 +233,60 @@ function headless_modify_wp_audio_shortcode( $html, $atts, $audio, $post_id, $li
 add_filter( 'wp_audio_shortcode','headless_modify_wp_audio_shortcode', 1, 5);
 
 
+// redirect frontent properly
+add_action( 'template_redirect', function () {
+
+
+    // Skip admin, login, REST, AJAX, cron
+    if (
+        is_admin() ||
+        wp_doing_ajax() ||
+        wp_doing_cron() ||
+        ( defined( 'REST_REQUEST' ) && REST_REQUEST )
+    ) {
+        return;
+    }
+
+    $old_domains = [
+        'olddomain.com',
+        'www.olddomain.com',
+    ];
+
+    $new_domain = 'newdomain.com';
+
+    $current_host = $_SERVER['HTTP_HOST'] ?? '';
+
+    if ( ! in_array( $current_host, $old_domains, true ) ) {
+        return;
+    }
+
+    $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+
+    // Exclude WordPress core & content files
+    $excluded_paths = [
+        '/wp-content/',
+        '/wp-includes/',
+        '/wp-admin/',
+        "/wp-json/"
+    ];
+
+    foreach ( $excluded_paths as $path ) {
+        if ( str_starts_with( $request_uri, $path ) ) {
+            return;
+        }
+    }
+
+    // Exclude direct file requests (images, css, js, fonts, etc.)
+    if ( preg_match( '/\.(jpg|jpeg|png|gif|webp|svg|ico|css|js|map|woff|woff2|ttf|eot|otf|pdf|zip|rar|mp4|mp3|webm)$/i', $request_uri ) ) {
+        return;
+    }
+
+    // Preserve scheme, path, and query
+    $scheme = is_ssl() ? 'https://' : 'http://';
+    $redirect_url = $scheme . $new_domain . $request_uri;
+
+    wp_redirect( $redirect_url, 301 );
+    exit;
+});
+
 

@@ -9,14 +9,14 @@
 add_action("add_meta_boxes", "hram_lyrics_add_post_meta_box");
 function hram_lyrics_add_post_meta_box()
 {
-    add_meta_box("lyrics-custom-meta-fields", "Song Lyrics And MetaData", "lyrics_post_box_markup", "post", "normal", "high", null);
+    add_meta_box("lyrics-custom-meta-fields", "Song Lyrics And MetaData", "hram_lyrics_post_box_markup", "post", "normal", "high", null);
 }
 
-function lyrics_post_box_markup( $post )
+function hram_lyrics_post_box_markup( $post )
 {
     wp_nonce_field( basename(__FILE__), "lyrics-post-additional-fields-nonce" );
     // Load the editor page form
-    include( get_stylesheet_directory().'/lyrics/lyrics-markup.php' );
+    include( HEADLESS_API_PATH.'lyrics/lyrics-markup.php' );
 }
 
 
@@ -108,7 +108,7 @@ add_filter( 'the_content', 'hram_setup_the_post_lyrics', 11, 1 );
  
  
  // Get audio meta data 
- function pikin_get_audio_meta($path, $key=null){
+ function hram_get_audio_meta($path, $key=null){
      
      // Requires the media library that unlocks the function
      require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -124,7 +124,7 @@ add_filter( 'the_content', 'hram_setup_the_post_lyrics', 11, 1 );
  
  
  //Show the Song Details If any at frontpage (Single post)
- function show_the_song_details($path){
+ function hram_show_the_song_details($path){
      
     $title  = get_post_meta( get_the_id(), 'the-song-title', true );
      $artist = get_post_meta( get_the_id(), 'the-song-artist', true );
@@ -136,7 +136,7 @@ add_filter( 'the_content', 'hram_setup_the_post_lyrics', 11, 1 );
           $producer = get_post_meta( get_the_id(), 'the-song-producer', true );
           $label = get_post_meta( get_the_id(), 'the-song-record-label', true );
           $releasedate = get_post_meta( get_the_id(), 'the-song-release-date', true );
-          $length = pikin_get_audio_meta(ABSPATH.$path,"length");
+          $length = hram_get_audio_meta(ABSPATH.$path,"length");
           
           
           $info = '<ul style="list-style-type:none;">

@@ -247,12 +247,13 @@ add_action( 'template_redirect', function () {
         return;
     }
 
+    $site_url =  wp_parse_url( site_url(), PHP_URL_HOST );
     $old_domains = [
-        'olddomain.com',
-        'www.olddomain.com',
+        $site_url,
+        "www.$site_url",
     ];
 
-    $new_domain = 'newdomain.com';
+    $new_domain = defined('HRAM_FRONTEND_URL') ? HRAM_FRONTEND_URL : '';
 
     $current_host = $_SERVER['HTTP_HOST'] ?? '';
 

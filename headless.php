@@ -3,7 +3,7 @@
  * Plugin Name: Headless API Manager
  * Description: Lightweight REST API endpoints for headless WordPress frontends.
  * Author: Engr Sam Chukwu
- * Version: 1.2.12
+ * Version: 1.2.13
  * License: GPL2
  * Text Domain: headless-api-manager
  * Author URI: https://github.com/veltany 
@@ -17,13 +17,21 @@ if (!defined('ABSPATH')) {
   exit;
 }
 
+
+// global helper
+function hram_get_option($option, $default = null) {
+    return untrailingslashit(
+        get_option($option, $default)
+    );
+}
+
 define('HEADLESS_API_PATH', plugin_dir_path(__FILE__));
 define('HRAM_PATH', plugin_dir_path(__FILE__));
 define('HRAM_PREFIX', 'HRAM');
 define('HRAM_API_ROUTE', 'wp/v2/headless-api'); 
 define('HRAM_DEBUG_MODE', false);
 define('HRAM_VERSION', '1.2.8');
-define('HRAM_FRONTEND_URL', get_home_url()); // set your frontend url here if needed
+define('HRAM_FRONTEND_URL', hram_get_option('hram_frontend_url', '')); // set your frontend url here if needed
 define('HRAM_SESSION_TTL', DAY_IN_SECONDS * 3); // 72 hours
 
 
@@ -37,6 +45,8 @@ $pluginlog = HRAM_PATH.'debug.log';
 $message.= "\n";
 error_log(current_time('mysql').": $message", 3, $pluginlog);
 }
+
+
 
 // database
 global $wpdb; 
@@ -58,6 +68,8 @@ require_once HEADLESS_API_PATH . 'includes/custom_rest_fields.php';
 require_once HEADLESS_API_PATH . 'includes/headless-kv-cache.php';
 require_once HEADLESS_API_PATH . 'includes/headless-analytics.php';
 require_once HEADLESS_API_PATH . 'includes/lyrics/lyrics.php';
+require_once HEADLESS_API_PATH . 'includes/admin/settings.php';
+
 
 
 //-------------------------------------

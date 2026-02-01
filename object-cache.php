@@ -24,7 +24,7 @@ class HK_Object_Cache {
     private $local = [];
 
      /** Debug mode */
-    private $debug = false;
+    private $debug = true;
 
     public function __construct($debug = false) {
         $this->detect_backend();

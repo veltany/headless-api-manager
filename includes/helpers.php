@@ -21,17 +21,6 @@ function headless_api__register_nav_menus() {
 add_action( 'init', 'headless_api__register_nav_menus' );
 
 
-// logging
-//Temporary logging
-function headless_log($message)
-{
-$pluginlog = plugin_dir_path(__FILE__).'debug.log';
-$message.= "\n";
-error_log($message, 3, $pluginlog);
-}
-
-
-
 /**
  * Get menu ID from location
  */
@@ -39,45 +28,6 @@ function headless_api_get_menu_id($location) {
   $locations = get_nav_menu_locations();
   return $locations[$location] ?? null;
 }
-
-
-
-
-
-// Add CORS support
-// KEEP THIS - This is the correct way for Headless WP
-// add_action('rest_api_init', function () {
-//     remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-//     add_filter('rest_pre_serve_request', 'headless_api_send_cors_headers', 15, 4);
-// });
-
-function headless_api_send_cors_headers($served, $result, $request, $server) {
-    $allowed_origins = [
-        defined('HRAM_FRONTEND_URL') ? HRAM_FRONTEND_URL : '',
-        'http://localhost:3000',
-        "https://gospeljuice.net",
-        "https://gospeljuice.name.ng",
-        "http://gospeljuice.name.ng"
-    ];
-
-    $origin = get_http_origin(); 
-
-    if (in_array($origin, $allowed_origins)) {
-        header('Access-Control-Allow-Origin: ' . $origin);
-        header('Access-Control-Allow-Credentials: true');
-        header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
-        header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce, X-Requested-With');
-        header('Vary: Origin'); 
-    }
-
-    if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
-        status_header(200);
-        exit;
-    }
-
-    return $served;
-}
-
 
 
 add_filter('rest_prepare_post', function ($response) {

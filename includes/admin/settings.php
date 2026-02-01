@@ -21,6 +21,15 @@ add_action('admin_init', function () {
             'default'           => '',
         ]
     );
+     register_setting(
+        'hram_settings_group',
+        'hram_api_key',
+        [
+            'type'              => 'string',
+            'sanitize_callback' => 'esc_url_raw',
+            'default'           => '',
+        ]
+    );
 });
 
 
@@ -49,6 +58,20 @@ function hram_render_settings_page() {
                         />
                         <p class="description">
                             Used for frontend redirects, CORS, and audio URLs.
+                        </p>
+                    </td>
+                      <td>
+                        <input
+                            type="text"
+                            id="hram_api_key"
+                            name="hram_api_key"
+                            value="<?php echo esc_attr(get_option('hram_api_key')); ?>"
+                            class="regular-text"
+                            placeholder="x-api-key-here"
+                            required
+                        />
+                        <p class="description">
+                            Used for frontend WP JSON API access.
                         </p>
                     </td>
                 </tr>

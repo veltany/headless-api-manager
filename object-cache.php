@@ -24,7 +24,7 @@ class HK_Object_Cache {
     private $local = [];
 
      /** Debug mode */
-    private $debug = true;
+    private $debug = false;
 
     public function __construct($debug = false) {
         $this->detect_backend();
@@ -35,6 +35,13 @@ class HK_Object_Cache {
      * Detect available object cache backend
      */
     private function detect_backend() {
+        
+         /* ================= APCu ================= */
+        if (function_exists('apcu_fetch') && ini_get('apc.enabled')) {
+            $this->backend = 'apcu';
+            $this->log("Using APCu object cache");
+            return;
+        }
 
         /* ================= REDIS ================= */
         if (class_exists('Redis')) {
@@ -63,13 +70,6 @@ class HK_Object_Cache {
             }
         }
 
-        /* ================= APCu ================= */
-        if (function_exists('apcu_fetch') && ini_get('apc.enabled')) {
-            $this->backend = 'apcu';
-            $this->log("Using APCu object cache");
-            return;
-        }
-
         /* ================= RUNTIME ONLY ================= */
         $this->backend = 'runtime';
         $this->log("Using Runtime-only object cache");
@@ -81,7 +81,8 @@ class HK_Object_Cache {
     private function log($message) {
         if ($this->debug) {
             $message .= "\n";
-            error_log(current_time('mysql') . ": $message");
+             $timestamp = date('Y-m-d H:i:s');
+    error_log("$timestamp: $message");
         }
     }
 
@@ -194,22 +195,30 @@ class HK_Object_Cache {
  * WordPress Required Wrapper Functions
  * ================================================== */
 
-// function wp_cache_get($key, $group = 'default') {
-//     global $wp_object_cache;
-//     return $wp_object_cache->get($key, $group);
+// if (!function_exists('wp_cache_get')) {
+//     function wp_cache_get($key, $group = 'default') {
+//         global $wp_object_cache;
+//         return $wp_object_cache->get($key, $group);
+//     }
 // }
 
-// function wp_cache_set($key, $value, $group = 'default', $ttl = 0) {
-//     global $wp_object_cache;
-//     return $wp_object_cache->set($key, $value, $group, $ttl);
+// if (!function_exists('wp_cache_set')) {
+//     function wp_cache_set($key, $value, $group = 'default', $ttl = 0) {
+//         global $wp_object_cache;
+//         return $wp_object_cache->set($key, $value, $group, $ttl);
+//     }
 // }
 
-// function wp_cache_delete($key, $group = 'default') {
-//     global $wp_object_cache;
-//     return $wp_object_cache->delete($key, $group);
+// if (!function_exists('wp_cache_delete')) {
+//     function wp_cache_delete($key, $group = 'default') {
+//         global $wp_object_cache;
+//         return $wp_object_cache->delete($key, $group);
+//     }
 // }
 
-// function wp_cache_flush() {
-//     global $wp_object_cache;
-//     return $wp_object_cache->flush();
+// if (!function_exists('wp_cache_flush')) {
+//     function wp_cache_flush() {
+//         global $wp_object_cache;
+//         return $wp_object_cache->flush();
+//     }
 // }

@@ -3,7 +3,7 @@
  * Plugin Name: Headless API Manager
  * Description: Lightweight REST API endpoints for headless WordPress frontends.
  * Author: Engr Sam Chukwu
- * Version: 1.2.14
+ * Version: 1.2.15
  * License: GPL2
  * Text Domain: headless-api-manager
  * Author URI: https://github.com/veltany 
@@ -28,8 +28,8 @@ function hram_get_option($option, $default = null) {
 define('HEADLESS_API_PATH', plugin_dir_path(__FILE__));
 define('HRAM_PATH', plugin_dir_path(__FILE__));
 define('HRAM_PREFIX', 'HRAM');
-define('HRAM_API_ROUTE', 'wp/v2/headless-api'); 
-define('HRAM_DEBUG_MODE', false);
+define('HRAM_API_ROUTE', hram_get_option('hram_api_route', 'wp/v2/headless-api')); 
+define('HRAM_DEBUG_MODE', hram_get_option('hram_debug_mode', false));
 define('HRAM_VERSION', '1.2.8');
 define('HRAM_FRONTEND_URL', hram_get_option('hram_frontend_url', '')); // set your frontend url here if needed
 define('HRAM_SESSION_TTL', DAY_IN_SECONDS * 3); // 72 hours
@@ -127,25 +127,28 @@ register_activation_hook(__FILE__, function () {
         INDEX expires_at (expires_at)
     ) $charset;
     
-    CREATE TABLE ". HRAM_ANALYTICS_TABLE ." (
-      id BIGINT AUTO_INCREMENT PRIMARY KEY,
-      user_id BIGINT NULL,
-      session_id VARCHAR(64),
-      event VARCHAR(32),
-      song_id BIGINT,
-      artist_id BIGINT,
-      timestamp INT,
-      meta JSON
-    ) $charset; 
-    
-    CREATE TABLE ".HRAM_SONG_STATS_TABLE ." (
-  song_id BIGINT PRIMARY KEY,
+   CREATE TABLE ". HRAM_ANALYTICS_TABLE ." (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  user_id BIGINT NULL,
+  session_id VARCHAR(64),
+  event VARCHAR(32),
+  song_id BIGINT,
+  artist_id BIGINT,
+  timestamp INT,
+  meta JSON,
+  PRIMARY KEY (id)
+) $charset;
+
+CREATE TABLE ".HRAM_SONG_STATS_TABLE ." (
+  song_id BIGINT NOT NULL,
   play_count INT DEFAULT 0,
   complete_count INT DEFAULT 0,
   playlist_add_count INT DEFAULT 0,
   score FLOAT DEFAULT 0,
-  updated_at INT
-); 
+  updated_at INT,
+  PRIMARY KEY (song_id)
+) $charset;
+
 
 CREATE TABLE ". HRAM_USER_AFFINITY_TABLE ." (
   user_id BIGINT,
@@ -163,16 +166,16 @@ CREATE TABLE ". HRAM_USER_AFFINITY_TABLE ." (
   PRIMARY KEY (song_id, related_song_id)
 );  
 
-
 CREATE TABLE ".HRAM_SESSION_AFFINITY_TABLE." (
   session_id VARCHAR(64) NOT NULL,
   song_id BIGINT NOT NULL,
   score FLOAT DEFAULT 0,
   last_interaction INT,
   PRIMARY KEY (session_id, song_id),
-  INDEX (song_id),
-  INDEX (session_id)
-);
+  KEY idx_song_id (song_id),
+  KEY idx_session_id (session_id)
+) $charset;
+
     
     "; 
     

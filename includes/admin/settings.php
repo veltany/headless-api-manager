@@ -1,5 +1,6 @@
 <?php
 
+// Add settings page to the admin menu
 add_action('admin_menu', function () {
     add_options_page(
         'Headless API Manager',
@@ -10,8 +11,9 @@ add_action('admin_menu', function () {
     );
 });
 
-
+// Register all plugin settings
 add_action('admin_init', function () {
+    // Frontend URL
     register_setting(
         'hram_settings_group',
         'hram_frontend_url',
@@ -21,18 +23,47 @@ add_action('admin_init', function () {
             'default'           => '',
         ]
     );
-     register_setting(
+
+    // API Key
+    register_setting(
         'hram_settings_group',
         'hram_api_key',
         [
             'type'              => 'string',
-            'sanitize_callback' => 'esc_url_raw',
+            'sanitize_callback' => 'sanitize_text_field',
             'default'           => '',
+        ]
+    );
+
+    // Debug mode (boolean)
+    register_setting(
+        'hram_settings_group',
+        'hram_debug_mode',
+        [
+            'type'              => 'boolean',
+            'sanitize_callback' => 'hram_sanitize_checkbox',
+            'default'           => false,
+        ]
+    );
+
+    // API route (string)
+    register_setting(
+        'hram_settings_group',
+        'hram_api_route',
+        [
+            'type'              => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default'           => '/wp-json/hram/v1',
         ]
     );
 });
 
+// Custom sanitization for checkbox
+function hram_sanitize_checkbox($value) {
+    return (bool) $value;
+}
 
+// Render the settings page
 function hram_render_settings_page() {
     ?>
     <div class="wrap">
@@ -60,7 +91,13 @@ function hram_render_settings_page() {
                             Used for frontend redirects, CORS, and audio URLs.
                         </p>
                     </td>
-                      <td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="hram_api_key">API Key</label>
+                    </th>
+                    <td>
                         <input
                             type="text"
                             id="hram_api_key"
@@ -72,6 +109,43 @@ function hram_render_settings_page() {
                         />
                         <p class="description">
                             Used for frontend WP JSON API access.
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="hram_debug_mode">Debug Mode</label>
+                    </th>
+                    <td>
+                        <input
+                            type="checkbox"
+                            id="hram_debug_mode"
+                            name="hram_debug_mode"
+                            value="1"
+                            <?php checked(1, get_option('hram_debug_mode')); ?>
+                        />
+                        <p class="description">
+                            Enable debug mode for logging and troubleshooting.
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="hram_api_route">API Route</label>
+                    </th>
+                    <td>
+                        <input
+                            type="text"
+                            id="hram_api_route"
+                            name="hram_api_route"
+                            value="<?php echo esc_attr(get_option('hram_api_route')); ?>"
+                            class="regular-text"
+                            placeholder="wp/v2/headless-api"
+                        />
+                        <p class="description">
+                            Custom API route for your headless endpoints.
                         </p>
                     </td>
                 </tr>

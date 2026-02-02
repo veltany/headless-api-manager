@@ -6,6 +6,26 @@ if (!defined('ABSPATH')) {
 
 
 /**
+ * Get menu ID from location
+ */
+function headless_api_get_menu_id($location) {
+  $locations = get_nav_menu_locations();
+  return $locations[$location] ?? null;
+}
+
+
+//  Register menu locations
+function headless_api__register_nav_menus() {
+    register_nav_menus( array(
+        'primary' => __( 'Headless Primary Menu', 'primary' ),
+        'footer'  => __( 'Headless Footer Menu', 'footer' ),
+    ) );
+}
+add_action( 'init', 'headless_api__register_nav_menus' );
+
+
+
+/**
  * Register REST namespace
  */
 add_action('rest_api_init', function () {

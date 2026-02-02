@@ -11,7 +11,7 @@ function headless_api_frontend_redirect() {
     // Only redirect requests for the old domain
     if (
         empty($_SERVER['HTTP_HOST']) ||
-        $_SERVER['HTTP_HOST'] !== 'gospeljuice.name.ng'
+        $_SERVER['HTTP_HOST'] !== site_url()
     ) {
         return;
     }
@@ -48,8 +48,6 @@ function headless_api_frontend_redirect() {
 
     // ---- REDIRECT ----
 
-    $target_domain = 'https://gospeljuice.net';
-
-    wp_redirect($target_domain . $request_uri, 301);
+    wp_redirect(HRAM_FRONTEND_URL. $request_uri, 301);
     exit;
 }

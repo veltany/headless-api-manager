@@ -11,23 +11,6 @@ function my_plugin_add_thumbnail_support() {
 add_action( 'after_setup_theme', 'my_plugin_add_thumbnail_support' );
 
 
-//  Register menu locations
-function headless_api__register_nav_menus() {
-    register_nav_menus( array(
-        'primary' => __( 'Headless Primary Menu', 'primary' ),
-        'footer'  => __( 'Headless Footer Menu', 'footer' ),
-    ) );
-}
-add_action( 'init', 'headless_api__register_nav_menus' );
-
-
-/**
- * Get menu ID from location
- */
-function headless_api_get_menu_id($location) {
-  $locations = get_nav_menu_locations();
-  return $locations[$location] ?? null;
-}
 
 
 add_filter('rest_prepare_post', function ($response) {
@@ -154,90 +137,5 @@ function extract_audio_blocks(array $blocks, array &$audios) {
     }
 }
 
-
-
-// Modify audio player link to be external parked domain 
-
-function headless_modify_wp_audio_shortcode( $html, $atts, $audio, $post_id, $library ) {
-    
- $host = HRAM_FRONTEND_URL;
- $site_url = HRAM_FRONTEND_URL;
  
- $link = $host;
- $path = parse_url($atts['mp3']);
- if(empty($path['path']))
- { $path = parse_url($atts['src']);} 
- 
- $getpath = $path["path"];
- 
- 
- $mp3link = 'https://gospeljuice.name.ng/'.$getpath; 
- 
- 
- $html ='<div id="AUDIO_DOWNLOAD_SECTION"> <audio class="wp-audio-shortcode"  preload="none" style="width: 100%;" controls controlsList="nodownload" src="'.$mp3link.'" ><source type="audio/mpeg" src="'.$mp3link.'" /><a href="'.$mp3link.'">'.$mp3link.'</a></audio> </div>';
-  
-  
- return $html ;
-
-}
-add_filter( 'wp_audio_shortcode','headless_modify_wp_audio_shortcode', 1, 5);
-
-
-// redirect frontent properly
-add_action( 'template_redirect', function () {
-
-
-    // Skip admin, login, REST, AJAX, cron
-    if (
-        is_admin() ||
-        wp_doing_ajax() ||
-        wp_doing_cron() ||
-        ( defined( 'REST_REQUEST' ) && REST_REQUEST )
-    ) {
-        return;
-    }
-
-    $site_url =  wp_parse_url( site_url(), PHP_URL_HOST );
-    $old_domains = [
-        $site_url,
-        "www.$site_url",
-    ];
-
-    $new_domain = defined('HRAM_FRONTEND_URL') ? HRAM_FRONTEND_URL : '';
-
-    $current_host = $_SERVER['HTTP_HOST'] ?? '';
-
-    if ( ! in_array( $current_host, $old_domains, true ) ) {
-        return;
-    }
-
-    $request_uri = $_SERVER['REQUEST_URI'] ?? '';
-
-    // Exclude WordPress core & content files
-    $excluded_paths = [
-        '/wp-content/',
-        '/wp-includes/',
-        '/wp-admin/',
-        "/wp-json/"
-    ];
-
-    foreach ( $excluded_paths as $path ) {
-        if ( str_starts_with( $request_uri, $path ) ) {
-            return;
-        }
-    }
-
-    // Exclude direct file requests (images, css, js, fonts, etc.)
-    if ( preg_match( '/\.(jpg|jpeg|png|gif|webp|svg|ico|css|js|map|woff|woff2|ttf|eot|otf|pdf|zip|rar|mp4|mp3|webm)$/i', $request_uri ) ) {
-        return;
-    }
-
-    // Preserve scheme, path, and query
-    $scheme = is_ssl() ? 'https://' : 'http://';
-    $redirect_url = $scheme . $new_domain . $request_uri;
-
-    wp_redirect( $redirect_url, 301 );
-    exit;
-});
-
 

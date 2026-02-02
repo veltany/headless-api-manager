@@ -1,5 +1,6 @@
 <?php
-
+ 
+ 
 add_action( 'rest_api_init', function () {
     register_rest_field( 'post', 'all_audio_urls', array(
         'get_callback' => 'get_post_audio_complete',
@@ -9,13 +10,15 @@ add_action( 'rest_api_init', function () {
 
 function get_post_audio_complete( $post ) {
     $post_id = $post['id'];
-   $raw_content = get_post_field( 'post_content', $post_id );
-   $content     = apply_filters( 'the_content', $raw_content );
-
+   $content = get_post_field( 'post_content', $post_id );
+    
     $audio_urls = [];
 
     $normalize_url = function ( $url ) {
     $url = trim( $url );
+     
+   
+
 
     // Already absolute
     if ( preg_match( '#^https?://#i', $url ) ) {
@@ -24,7 +27,7 @@ function get_post_audio_complete( $post ) {
 
     // Root-relative: /wp-content/...
     if ( str_starts_with( $url, '/' ) ) {
-        return esc_url_raw( home_url( $url ) );
+        return esc_url_raw( home_url($url) );
     }
 
     return '';

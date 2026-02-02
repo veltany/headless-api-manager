@@ -4,6 +4,21 @@ if (!defined('ABSPATH')) {
   exit;
 }
 
+ 
+/**
+ * Register REST namespace
+ */
+add_action('rest_api_init', function () {
+  register_rest_route(HRAM_API_ROUTE, '/site-logo', [
+    'methods'  => 'GET',
+    'callback' => 'headless_api_get_site_logo',
+    'permission_callback' => '__return_true',
+  ]);
+}); 
+
+
+
+
 function headless_api_get_site_logo() {
   $cache_key = 'headless_api_site_logo';
   $cached = get_transient($cache_key);

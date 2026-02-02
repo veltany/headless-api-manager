@@ -4,6 +4,20 @@ if (!defined('ABSPATH')) {
   exit;
 }
 
+
+/**
+ * Register REST namespace
+ */
+add_action('rest_api_init', function () {
+  register_rest_route(HRAM_API_ROUTE, '/menu', [
+    'methods'  => 'GET',
+    'callback' => 'headless_api_get_menu',
+    'permission_callback' => '__return_true',
+  ]);
+
+}); 
+
+
 function headless_api_get_menu(WP_REST_Request $request) {
   $location = $request->get_param('location') ?: 'primary';
 

@@ -9,18 +9,39 @@ add_action( 'rest_api_init', function () {
 
 function get_post_audio_complete( $post ) {
     $post_id = $post['id'];
-    $content = get_post_field( 'post_content', $post_id );
+   $raw_content = get_post_field( 'post_content', $post_id );
+   $content     = apply_filters( 'the_content', $raw_content );
+
     $audio_urls = [];
+
+    $normalize_url = function ( $url ) {
+    $url = trim( $url );
+
+    // Already absolute
+    if ( preg_match( '#^https?://#i', $url ) ) {
+        return esc_url_raw( $url );
+    }
+
+    // Root-relative: /wp-content/...
+    if ( str_starts_with( $url, '/' ) ) {
+        return esc_url_raw( home_url( $url ) );
+    }
+
+    return '';
+};
+
 
     /**
      * Helper to push normalized audio object
      */
-    $add_audio = function ( $url ) use ( &$audio_urls ) {
-        $url = esc_url_raw( $url );
-        if ( ! empty( $url ) ) {
-            $audio_urls[] = $url;
-        }
-    };
+   $add_audio = function ( $url ) use ( &$audio_urls, $normalize_url ) {
+    $normalized = $normalize_url( $url );
+
+    if ( ! empty( $normalized ) ) {
+        $audio_urls[] = $normalized;
+    }
+};
+
 
     // 1⃣ Gutenberg core/audio blocks
     if ( has_blocks( $content ) ) {
@@ -60,6 +81,19 @@ function get_post_audio_complete( $post ) {
             $add_audio( $url );
         }
     }
+
+    // 4 Naked audio URLs (WordPress auto-embed)
+preg_match_all(
+    '#(?<!["\'>])\bhttps?://[^\s<]+?\.(mp3|m4a|ogg|wav|wma)(\?[^\s<]*)?#i',
+    $content,
+    $url_matches
+);
+
+if ( ! empty( $url_matches[0] ) ) {
+    foreach ( $url_matches[0] as $url ) {
+        $add_audio( $url );
+    }
+}
 
    
 

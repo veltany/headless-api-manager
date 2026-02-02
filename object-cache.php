@@ -1,5 +1,5 @@
 <?php
-/** BY: Headless API
+/** BY: Headless API Manager
  * Pure Object Cache (No DB Fallback)
  * Backends: Redis → Memcached → APCu → Runtime-only
  */

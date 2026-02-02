@@ -53,7 +53,7 @@ add_action('admin_init', function () {
         [
             'type'              => 'string',
             'sanitize_callback' => 'sanitize_text_field',
-            'default'           => '/wp-json/hram/v1',
+            'default'           => 'wp/v2/headless-api',
         ]
     );
 });
@@ -105,7 +105,7 @@ function hram_render_settings_page() {
                             value="<?php echo esc_attr(get_option('hram_api_key')); ?>"
                             class="regular-text"
                             placeholder="x-api-key-here"
-                            required
+                        
                         />
                         <p class="description">
                             Used for frontend WP JSON API access.

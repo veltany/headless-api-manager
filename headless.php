@@ -3,7 +3,7 @@
  * Plugin Name: Headless API Manager
  * Description: Lightweight REST API endpoints for headless WordPress frontends.
  * Author: Engr Sam Chukwu
- * Version: 1.2.18
+ * Version: 1.2.19
  * License: GPL2
  * Text Domain: headless-api-manager
  * Author URI: https://github.com/veltany 
@@ -191,7 +191,8 @@ if (!wp_next_scheduled('hram_kv_cleanup')) {
 
 // Install object cache
 if (  !get_option('hkvc_object_cache_installed')  && function_exists('hkvc_install_object_cache') )
-{   hkvc_install_object_cache(); } 
+{   //hkvc_install_object_cache();
+ } 
 });
 
 register_deactivation_hook(__FILE__, function () {
@@ -201,7 +202,8 @@ register_deactivation_hook(__FILE__, function () {
   wp_clear_scheduled_hook('hram_daily_session_cleanup');
   wp_clear_scheduled_hook('hram_kv_cleanup');
   if ( function_exists('hkvc_uninstall_object_cache') )
-  {   hkvc_uninstall_object_cache(); }
+  {   //hkvc_uninstall_object_cache();
+   }
 });
 
 

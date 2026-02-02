@@ -1,7 +1,7 @@
 {
   "name": "Headless API Manager",
   "slug": "headless-api-manager",
-  "version": "1.2.18",
+  "version": "1.2.19",
   "download_url": "https://github.com/veltany/headless-api-manager/archive/refs/heads/main.zip",
   "requires": "6.6",
   "requires_php": "8.2",

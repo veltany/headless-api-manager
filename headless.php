@@ -3,7 +3,7 @@
  * Plugin Name: Headless API Manager
  * Description: Lightweight REST API endpoints for headless WordPress frontends.
  * Author: Engr Sam Chukwu
- * Version: 1.2.24
+ * Version: 1.2.25
  * License: GPL2
  * Text Domain: headless-api-manager
  * Author URI: https://github.com/veltany 
@@ -30,9 +30,11 @@ define('HRAM_PATH', plugin_dir_path(__FILE__));
 define('HRAM_PREFIX', 'HRAM');
 define('HRAM_API_ROUTE', hram_get_option('hram_api_route', 'wp/v2/headless-api')); 
 define('HRAM_DEBUG_MODE', hram_get_option('hram_debug_mode', false));
-define('HRAM_VERSION', '1.2.8');
+define('HRAM_VERSION', '1.2.25');
 define('HRAM_FRONTEND_URL', hram_get_option('hram_frontend_url', '')); // set your frontend url here if needed
 define('HRAM_SESSION_TTL', DAY_IN_SECONDS * 3); // 72 hours
+define('HRAM_DB_VERSION', '1.2.25');
+
 
 
 
@@ -190,6 +192,8 @@ CREATE TABLE ".HRAM_SESSION_AFFINITY_TABLE." (
 if (!wp_next_scheduled('hram_kv_cleanup')) {
     wp_schedule_event(time(), 'hourly', 'hram_kv_cleanup');
 }
+// db upgrades
+hram_run_db_upgrades();
 
 // Install object cache
 if (  !get_option('hkvc_object_cache_installed')  && function_exists('hkvc_install_object_cache') )
@@ -207,5 +211,100 @@ register_deactivation_hook(__FILE__, function () {
   {   //hkvc_uninstall_object_cache();
    }
 });
+
+add_action('plugins_loaded', 'hram_run_db_upgrades');
+
+function hram_run_db_upgrades() {
+  global $wpdb;
+
+  $installed = get_option('hram_db_version');
+
+  if ($installed === HRAM_DB_VERSION) {
+    return;
+  }
+
+  hram_upgrade_song_stats_table();
+  hram_add_missing_indexes();
+
+  update_option('hram_db_version', HRAM_DB_VERSION, false);
+}
+function hram_upgrade_song_stats_table() {
+  global $wpdb;
+
+  $table = HRAM_SONG_STATS_TABLE;
+
+  $column = $wpdb->get_results("
+    SHOW COLUMNS FROM {$table} LIKE 'download_count'
+  ");
+
+  if (empty($column)) {
+    $wpdb->query("
+      ALTER TABLE {$table}
+      ADD COLUMN download_count INT DEFAULT 0 AFTER playlist_add_count
+    ");
+  }
+}
+function hram_add_missing_indexes() {
+  global $wpdb;
+
+  $indexes = [
+
+    // ============================
+    // ANALYTICS LOG
+    // ============================
+    HRAM_ANALYTICS_TABLE => [
+      'idx_event'        => 'event',
+      'idx_song_time'    => '(song_id, timestamp)',
+      'idx_session_time' => '(session_id, timestamp)',
+      'idx_user_time'    => '(user_id, timestamp)',
+    ],
+
+    // ============================
+    // SONG STATS
+    // ============================
+    HRAM_SONG_STATS_TABLE => [
+      'idx_score'      => 'score',
+      'idx_updated_at' => 'updated_at',
+    ],
+
+    // ============================
+    // USER AFFINITY
+    // ============================
+    HRAM_USER_AFFINITY_TABLE => [
+      'idx_song' => 'song_id',
+    ],
+
+    // ============================
+    // SESSION AFFINITY
+    // ============================
+    HRAM_SESSION_AFFINITY_TABLE => [
+      'idx_last_interaction' => 'last_interaction',
+    ],
+
+    // ============================
+    // COPLAY
+    // ============================
+    HRAM_COPLAY_TABLE => [
+      'idx_related' => 'related_song_id',
+    ],
+  ];
+
+  foreach ($indexes as $table => $defs) {
+    foreach ($defs as $name => $cols) {
+
+      $exists = $wpdb->get_var($wpdb->prepare("
+        SHOW INDEX FROM {$table} WHERE Key_name = %s
+      ", $name));
+
+      if (!$exists) {
+        $wpdb->query("
+          ALTER TABLE {$table}
+          ADD INDEX {$name} {$cols}
+        ");
+      }
+    }
+  }
+}
+
 
 

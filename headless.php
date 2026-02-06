@@ -3,7 +3,7 @@
  * Plugin Name: Headless API Manager
  * Description: Lightweight REST API endpoints for headless WordPress frontends.
  * Author: Engr Sam Chukwu
- * Version: 1.2.23
+ * Version: 1.2.24
  * License: GPL2
  * Text Domain: headless-api-manager
  * Author URI: https://github.com/veltany 
@@ -128,6 +128,7 @@ CREATE TABLE ".HRAM_SONG_STATS_TABLE ." (
   play_count INT DEFAULT 0,
   complete_count INT DEFAULT 0,
   playlist_add_count INT DEFAULT 0,
+  download_count INT DEFAULT 0,
   score FLOAT DEFAULT 0,
   updated_at INT,
   PRIMARY KEY (song_id)

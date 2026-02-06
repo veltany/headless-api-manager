@@ -55,10 +55,12 @@ function hram_log_analytics(WP_REST_Request $request)
   $result = $wpdb->insert($table, $insert, $formats);
 
   if ($result === false) {
+    $error = $wpdb->last_error;
+    hram_log("Failed to log analytics event: $error");
     return new WP_REST_Response([
       'success' => false,
       'message' => 'Failed to log analytics event',
-      'error'   => $wpdb->last_error,
+      'error'   => $error,
     ], 500);
   }
 
@@ -132,35 +134,38 @@ function hram_rollup_hourly_events() {
   /**
    * 1. SONG STATS 
    */
-  $wpdb->query("
-    INSERT INTO " . HRAM_SONG_STATS_TABLE . " 
-      (song_id, play_count, complete_count, playlist_add_count, score, updated_at)
-    SELECT 
-      song_id,
-      SUM(event = 'play'),
-      SUM(event = 'play_complete'),
-      SUM(event = 'song_add_to_playlist'),
-      SUM(
-        CASE event
-          WHEN 'play' THEN 1
-          WHEN 'play_progress_50' THEN 2
-          WHEN 'play_complete' THEN 3
-          WHEN 'song_add_to_playlist' THEN 4
-          ELSE 0
-        END
-      ),
-      $now
-    FROM " . HRAM_ANALYTICS_TABLE . "
-    WHERE timestamp > $since
-      AND song_id IS NOT NULL
-    GROUP BY song_id
-    ON DUPLICATE KEY UPDATE
-      play_count = play_count + VALUES(play_count),
-      complete_count = complete_count + VALUES(complete_count),
-      playlist_add_count = playlist_add_count + VALUES(playlist_add_count),
-      score = score + VALUES(score),
-      updated_at = $now
-  ");
+     $wpdb->query("
+  INSERT INTO " . HRAM_SONG_STATS_TABLE . " 
+    (song_id, play_count, complete_count, download_count, playlist_add_count, score, updated_at)
+  SELECT 
+    song_id,
+    SUM(event = 'play'),
+    SUM(event = 'play_complete'),
+    SUM(event = 'song_download'),
+    SUM(event = 'song_add_to_playlist'),
+    SUM(
+      CASE event
+        WHEN 'play' THEN 1
+        WHEN 'play_progress_50' THEN 2
+        WHEN 'play_complete' THEN 4
+        WHEN 'song_download' THEN 4
+        WHEN 'song_add_to_playlist' THEN 3
+        ELSE 0
+      END
+    ),
+    $now
+  FROM " . HRAM_ANALYTICS_TABLE . "
+  WHERE timestamp > $since
+    AND song_id IS NOT NULL
+  GROUP BY song_id
+  ON DUPLICATE KEY UPDATE
+    play_count = play_count + VALUES(play_count),
+    complete_count = complete_count + VALUES(complete_count),
+    download_count = download_count + VALUES(download_count),
+    playlist_add_count = playlist_add_count + VALUES(playlist_add_count),
+    score = score + VALUES(score),
+    updated_at = $now
+");
 
   /**
    * 2. SESSION × SONG AFFINITY (NEW)
@@ -175,8 +180,8 @@ function hram_rollup_hourly_events() {
         CASE event
           WHEN 'play' THEN 1
           WHEN 'play_progress_50' THEN 2
-          WHEN 'play_complete' THEN 3
-          WHEN 'song_add_to_playlist' THEN 4
+          WHEN 'play_complete' THEN 4
+          WHEN 'song_add_to_playlist' THEN 3
            WHEN 'song_download' THEN 4
           ELSE 0
         END
@@ -226,19 +231,27 @@ add_action('hram_daily_coplay_build', function () {
       a.song_id,
       b.song_id,
       COUNT(*) AS weight
-    FROM " . HRAM_ANALYTICS_TABLE . " a
-    JOIN " . HRAM_ANALYTICS_TABLE . " b
+    FROM (
+      SELECT DISTINCT session_id, song_id
+      FROM " . HRAM_ANALYTICS_TABLE . "
+      WHERE event IN ('play', 'song_download')
+        AND timestamp >= $since
+    ) a
+    JOIN (
+      SELECT DISTINCT session_id, song_id
+      FROM " . HRAM_ANALYTICS_TABLE . "
+      WHERE event IN ('play', 'song_download')
+        AND timestamp >= $since
+    ) b
       ON a.session_id = b.session_id
-      AND a.song_id < b.song_id
-    WHERE a.event = 'play'
-      AND b.event = 'play'
-      AND a.timestamp >= $since
+     AND a.song_id < b.song_id
     GROUP BY a.song_id, b.song_id
     ON DUPLICATE KEY UPDATE
       weight = weight + VALUES(weight)
   ");
-  hram_log("hram_daily_coplay_build cron run successfully.");
 });
+
+
 
 
 
@@ -479,45 +492,44 @@ function hram_recommend_trending(WP_REST_Request $request) {
 
   $limit      = min(50, max(1, intval($request->get_param('limit') ?? 20)));
   $excludeIds = hram_parse_exclude_ids($request);
-
-  // Optional time window (seconds)
-  // example: ?since=86400 (last 24h)
-  $since = intval($request->get_param('since'));
+  $since      = intval($request->get_param('since'));
 
   $excludeSql = hram_build_not_in_clause($excludeIds, 'ss.song_id');
-  $timeSql    = $since > 0
-    ? $wpdb->prepare(" AND ss.updated_at >= %d", time() - $since)
+
+  $now = time();
+
+  $timeSql = $since > 0
+    ? $wpdb->prepare(" AND ss.updated_at >= %d", $now - $since)
     : '';
 
-  /**
-   * Freshness-aware trending score
-   */
   $sql = "
     SELECT
       ss.song_id,
-
       (
         ss.score *
         CASE
-          WHEN ss.updated_at >= UNIX_TIMESTAMP() - 21600 THEN 1.0   -- 6h
-          WHEN ss.updated_at >= UNIX_TIMESTAMP() - 86400 THEN 0.7   -- 24h
-          WHEN ss.updated_at >= UNIX_TIMESTAMP() - 259200 THEN 0.4  -- 3 days
+          WHEN ss.updated_at >= %d THEN 1.0
+          WHEN ss.updated_at >= %d THEN 0.7
+          WHEN ss.updated_at >= %d THEN 0.4
           ELSE 0.2
         END
       ) AS rank_score
-
     FROM " . HRAM_SONG_STATS_TABLE . " ss
-
     WHERE ss.score > 0
       {$excludeSql}
       {$timeSql}
-
     ORDER BY rank_score DESC
     LIMIT %d
   ";
 
   $results = $wpdb->get_results(
-    $wpdb->prepare($sql, $limit),
+    $wpdb->prepare(
+      $sql,
+      $now - 21600,
+      $now - 86400,
+      $now - 259200,
+      $limit
+    ),
     ARRAY_A
   );
 
@@ -527,6 +539,8 @@ function hram_recommend_trending(WP_REST_Request $request) {
     'data'    => $results
   ];
 }
+
+
 
 //---------------------------------------------------
 

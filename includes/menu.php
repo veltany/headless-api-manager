@@ -19,6 +19,7 @@ function headless_api__register_nav_menus() {
     register_nav_menus( array(
         'primary' => __( 'Headless Primary Menu', 'primary' ),
         'footer'  => __( 'Headless Footer Menu', 'footer' ),
+        'footer-note-links'  => __( 'Headless Footer Note Links', 'footer-note-links' ),
     ) );
 }
 add_action( 'init', 'headless_api__register_nav_menus' );
@@ -64,7 +65,7 @@ function headless_api_get_menu(WP_REST_Request $request) {
     $menu[$item->ID] = [
       'id'       => $item->ID,
       'title'    => $item->title,
-      'url'      => wp_make_link_relative($item->url),
+      'url'      => $item->url,
       'slug'     => sanitize_title($item->title),
       'parent'   => (int) $item->menu_item_parent,
       'children' => [],

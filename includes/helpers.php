@@ -13,36 +13,7 @@ add_action( 'after_setup_theme', 'my_plugin_add_thumbnail_support' );
 
 
 
-add_filter('rest_prepare_post', function ($response) {
-     
-    if (empty($response->data['content']['rendered'])) {
-        return $response;
-    }
-
-    $html = $response->data['content']['rendered'];
-
-    libxml_use_internal_errors(true);
-    $dom = new DOMDocument();
-    $dom->loadHTML('<?xml encoding="utf-8" ?>' . $html);
-
-    $xpath = new DOMXPath($dom);
-    foreach ($xpath->query('//figure[contains(@class,"wp-block-audio")]') as $node) {
-        $node->parentNode->removeChild($node);
-    }
-
-    $body = $dom->getElementsByTagName('body')->item(0);
-    $clean = '';
-    foreach ($body->childNodes as $child) {
-        $clean .= $dom->saveHTML($child);
-    }
-
-    $response->data['content']['rendered'] = $clean;
-
-    return $response;
-}, 10);
-
-
- add_filter('rest_prepare_post', 'headless_api_rest_replace_audio_shortcode', 10, 3);
+ //add_filter('rest_prepare_post', 'headless_api_rest_replace_audio_shortcode', 10, 3);
 
 function headless_api_rest_replace_audio_shortcode($response, $post, $request) {
 
@@ -138,3 +109,43 @@ function extract_audio_blocks(array $blocks, array &$audios) {
 }
 
  
+
+
+// Sanitize and remove audio blocks from wp rest content
+add_filter('rest_prepare_post', function ($response, $post, $request) {
+
+    $content = $post->post_content;
+
+    // 1️⃣ Remove Gutenberg audio blocks
+    if (has_block('core/audio', $post)) {
+        $blocks = parse_blocks($content);
+        foreach ($blocks as &$block) {
+            if ($block['blockName'] === 'core/audio') {
+                $block['innerHTML'] = ''; // remove block content
+            }
+        }
+        // Rebuild content without audio
+        $content = '';
+        foreach ($blocks as $block) {
+            $content .= $block['innerHTML'] ?? '';
+        }
+    }
+
+    // 2️⃣ Remove classic [audio] shortcodes
+    $content = preg_replace('/\[audio[^\]]*\]/i', '', $content);
+
+    // 3️⃣ Remove any remaining <audio> HTML tags
+    $content = preg_replace('/<audio[^>]*>.*?<\/audio>/is', '', $content);
+
+    // 4️⃣ Optionally remove <figure> wrappers with audio
+    $content = preg_replace('/<figure[^>]*class="[^"]*wp-block-audio[^"]*"[^>]*>.*?<\/figure>/is', '', $content);
+
+    // 5️⃣ Optionally strip inline <source> tags in audio
+    $content = preg_replace('/<source[^>]*>/i', '', $content);
+
+    // Save sanitized content in REST response
+    $response->data['sanitized_content'] = $content;
+
+    return $response;
+
+}, 10, 3);

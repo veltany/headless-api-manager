@@ -3,7 +3,7 @@
  * Plugin Name: Headless API Manager
  * Description: Lightweight REST API endpoints for headless WordPress frontends.
  * Author: Engr Sam Chukwu
- * Version: 1.2.29
+ * Version: 1.2.30
  * License: GPL2
  * Text Domain: headless-api-manager
  * Author URI: https://github.com/veltany 

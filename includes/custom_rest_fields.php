@@ -6,6 +6,13 @@ add_action( 'rest_api_init', function () {
         'get_callback' => 'get_post_audio_complete',
         'schema'       => null,
     ) );
+
+     //  featured media sources field
+    register_rest_field( 'post', 'featured_media_src', array(
+        'get_callback' => 'get_featured_media_src',
+        'schema'       => null,
+    ) );
+
 });
 
 function get_post_audio_complete( $post ) {
@@ -115,4 +122,70 @@ if ( ! empty( $url_matches[0] ) ) {
             "media_details" => wp_get_attachment_metadata( attachment_url_to_postid( $url ) ),
         ];
     }, $audio_urls );
+}
+
+ 
+
+ 
+/**
+ * Return structured featured media image data for REST API.
+ *
+ * @param array $post REST post object.
+ * @return array|null
+ */
+function get_featured_media_src( $post ) {
+
+    if ( empty( $post['id'] ) ) {
+        return null;
+    }
+
+    $post_id = (int) $post['id'];
+
+    if ( ! has_post_thumbnail( $post_id ) ) {
+        return null;
+    }
+
+    $attachment_id = get_post_thumbnail_id( $post_id );
+
+    if ( ! $attachment_id ) {
+        return null;
+    }
+
+    // Ensure attachment exists
+    $attachment = get_post( $attachment_id );
+    if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+        return null;
+    }
+
+    $sizes = [];
+
+    $registered_sizes = get_intermediate_image_sizes();
+    $registered_sizes[] = 'full';
+
+    foreach ( $registered_sizes as $size ) {
+
+        $image = wp_get_attachment_image_src( $attachment_id, $size );
+
+        if ( ! $image ) {
+            continue;
+        }
+
+        $sizes[ $size ] = [
+            'src'    => esc_url_raw( $image[0] ),
+            'width'  => (int) $image[1],
+            'height' => (int) $image[2],
+        ];
+    }
+
+    if ( empty( $sizes ) ) {
+        return null;
+    }
+
+    return [
+        'media_id'   => $attachment_id,
+        'alt_text'   => get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ),
+        'mime_type'  => get_post_mime_type( $attachment_id ),
+        'sizes'      => $sizes,
+        //'media_details' => wp_get_attachment_metadata( $attachment_id ),
+    ];
 }

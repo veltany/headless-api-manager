@@ -109,20 +109,23 @@ function extract_audio_blocks(array $blocks, array &$audios) {
 }
 
  
+
+
+
 add_filter('rest_prepare_post', function ($response, $post, $request) {
 
     $content = $post->post_content;
 
-    // 1️⃣ Remove Gutenberg audio blocks wrapped in <figure>
+    // 1️⃣ Remove Gutenberg audio blocks wrapped in <figure> (if any)
     $content = preg_replace(
         '/<figure[^>]*class="[^"]*wp-block-audio[^"]*"[^>]*>.*?<\/figure>/is',
         '',
         $content
     );
 
-    // 2️⃣ Remove all <audio> elements including nested <source> or <a>
+    // 2️⃣ Remove all <audio> tags, including nested <source> and fallback <a>
     $content = preg_replace(
-        '/<audio[^>]*>.*?<\/audio>/is',
+        '/<audio\b[^>]*>.*?<\/audio>/is',
         '',
         $content
     );
@@ -134,12 +137,15 @@ add_filter('rest_prepare_post', function ($response, $post, $request) {
         $content
     );
 
-    // 4️⃣ Optional: strip leftover <source> tags (rare)
+    // Optional: remove leftover <source> tags outside audio (rare)
     $content = preg_replace(
         '/<source[^>]*>/i',
         '',
         $content
     );
+
+    // Optional: remove any empty <p> that might be left after audio removal
+    $content = preg_replace('/<p>\s*<\/p>/i', '', $content);
 
     // Expose sanitized content in REST API
     $response->data['sanitized_content'] = $content;

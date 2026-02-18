@@ -109,41 +109,39 @@ function extract_audio_blocks(array $blocks, array &$audios) {
 }
 
  
-
-
-// Sanitize and remove audio blocks from wp rest content
 add_filter('rest_prepare_post', function ($response, $post, $request) {
 
     $content = $post->post_content;
 
-    // 1️⃣ Remove Gutenberg audio blocks
-    if (has_block('core/audio', $post)) {
-        $blocks = parse_blocks($content);
-        foreach ($blocks as &$block) {
-            if ($block['blockName'] === 'core/audio') {
-                $block['innerHTML'] = ''; // remove block content
-            }
-        }
-        // Rebuild content without audio
-        $content = '';
-        foreach ($blocks as $block) {
-            $content .= $block['innerHTML'] ?? '';
-        }
-    }
+    // 1️⃣ Remove Gutenberg audio blocks wrapped in <figure>
+    $content = preg_replace(
+        '/<figure[^>]*class="[^"]*wp-block-audio[^"]*"[^>]*>.*?<\/figure>/is',
+        '',
+        $content
+    );
 
-    // 2️⃣ Remove classic [audio] shortcodes
-    $content = preg_replace('/\[audio[^\]]*\]/i', '', $content);
+    // 2️⃣ Remove all <audio> elements including nested <source> or <a>
+    $content = preg_replace(
+        '/<audio[^>]*>.*?<\/audio>/is',
+        '',
+        $content
+    );
 
-    // 3️⃣ Remove any remaining <audio> HTML tags
-    $content = preg_replace('/<audio[^>]*>.*?<\/audio>/is', '', $content);
+    // 3️⃣ Remove classic [audio] shortcodes
+    $content = preg_replace(
+        '/\[audio[^\]]*\]/i',
+        '',
+        $content
+    );
 
-    // 4️⃣ Optionally remove <figure> wrappers with audio
-    $content = preg_replace('/<figure[^>]*class="[^"]*wp-block-audio[^"]*"[^>]*>.*?<\/figure>/is', '', $content);
+    // 4️⃣ Optional: strip leftover <source> tags (rare)
+    $content = preg_replace(
+        '/<source[^>]*>/i',
+        '',
+        $content
+    );
 
-    // 5️⃣ Optionally strip inline <source> tags in audio
-    $content = preg_replace('/<source[^>]*>/i', '', $content);
-
-    // Save sanitized content in REST response
+    // Expose sanitized content in REST API
     $response->data['sanitized_content'] = $content;
 
     return $response;

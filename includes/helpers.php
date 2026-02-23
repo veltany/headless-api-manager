@@ -12,38 +12,34 @@ add_action( 'after_setup_theme', 'my_plugin_add_thumbnail_support' );
 
 
 
-// sanite rest audio shorcodes from content
 // Sanitize REST audio shortcodes and HTML from content
 add_filter('the_content', function ($content) {
 
-    // Remove Gutenberg <figure class="wp-block-audio"> blocks
-    $content = preg_replace(
-        '/<figure[^>]*class="[^"]*wp-block-audio[^"]*"[^>]*>.*?<\/figure>/is',
-        '',
-        $content
-    );
+    // 1. Remove Gutenberg <figure class="wp-block-audio"> blocks
+    $content = preg_replace('/<figure[^>]*class="[^"]*wp-block-audio[^"]*"[^>]*>.*?<\/figure>/is', '', $content);
 
-    // Remove all <audio> elements including nested <source> or <a>
-    $content = preg_replace(
-        '/<audio\b[^>]*>.*?<\/audio>/is',
-        '',
-        $content
-    );
+    // 2. Remove all <audio> elements including nested <source> or <a>
+    $content = preg_replace('/<audio\b[^>]*>.*?<\/audio>/is', '', $content);
 
-    // Remove classic [audio] shortcodes AND the closing [/audio] strings
-    // The \/? makes the forward slash optional, catching both opening and closing tags
-    $content = preg_replace(
-        '/\[\/?audio[^\]]*\]/i',
-        '',
-        $content
-    );
+    // 3. Remove enclosing shortcodes and anything between them: [audio]...[/audio]
+    $content = preg_replace('/\[audio[^\]]*\].*?\[\/audio\]/is', '', $content);
 
-    // Remove empty <p> tags leftover
-    $content = preg_replace('/<p>\s*<\/p>/i', '', $content);
+    // 4. Remove standalone [audio] and [/audio] tags (Normal brackets)
+    $content = preg_replace('/\[\/?audio[^\]]*\]/i', '', $content);
 
-    return $content;
+    // 5. Remove standalone [audio] and [/audio] tags (HTML Encoded brackets)
+    $content = preg_replace('/&#91;\/?audio.*?&#93;/i', '', $content);
 
-}, 10);
+    // 6. Hard-coded fallback for the exact literal strings
+    $content = str_ireplace(['[/audio]', '&#91;/audio&#93;'], '', $content);
+
+    // 7. Clean up empty <p> tags, including those with rogue <br> tags inside
+    $content = preg_replace('/<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/i', '', $content);
+
+    hram_log(trim($content));
+    return trim($content);
+
+}, 20); // <-- CHANGED TO PRIORITY 20
 
 
 

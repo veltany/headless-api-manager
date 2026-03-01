@@ -3,7 +3,7 @@
  * Plugin Name: Headless API Manager
  * Description: Lightweight REST API endpoints for headless WordPress frontends.
  * Author: Engr Sam Chukwu
- * Version: 1.2.34
+ * Version: 1.2.35
  * License: GPL2
  * Text Domain: headless-api-manager
  * Author URI: https://github.com/veltany 
@@ -90,7 +90,7 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
 
 
 // Redirect frontend requests
-add_action('init', 'headless_api_frontend_redirect', 1);
+//add_action('init', 'headless_api_frontend_redirect', 1);
 
 
 /**

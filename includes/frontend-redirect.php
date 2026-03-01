@@ -6,48 +6,30 @@ if (!defined('ABSPATH')) {
 /**
  * Redirect frontend requests to new domain
  */
-function headless_api_frontend_redirect() {
+add_action('template_redirect', function () {
 
-    // Only redirect requests for the old domain
+    // Do not redirect if:
     if (
-        empty($_SERVER['HTTP_HOST']) ||
-        $_SERVER['HTTP_HOST'] !== site_url()
+        is_admin() ||                       // wp-admin
+        wp_doing_ajax() ||                  // admin-ajax
+        wp_doing_cron() ||                  // cron
+        defined('REST_REQUEST') && REST_REQUEST ||  // REST API
+        strpos($_SERVER['REQUEST_URI'], '/wp-json/') === 0 ||
+        strpos($_SERVER['REQUEST_URI'], '/wp-login.php') === 0
     ) {
         return;
     }
 
-    $request_uri = $_SERVER['REQUEST_URI'] ?? '/';
-
-    // ---- HARD EXCLUSIONS (must come early) ----
-
-    // Allow REST API (ALL wp-json routes)
-    if (strpos($request_uri, '/wp-json') === 0) {
+    // Prevent redirect loop if already on target domain
+    if ($_SERVER['HTTP_HOST'] === HRAM_FRONTEND_URL ) {
         return;
     }
 
-    // Allow admin dashboard
-    if (is_admin()) {
-        return;
-    }
+    // Preserve request URI
+    $request_uri = $_SERVER['REQUEST_URI'];
 
-    // Allow login
-    if (strpos($request_uri, '/wp-login.php') === 0) {
-        return;
-    }
+    $new_url = HRAM_FRONTEND_URL . $request_uri;
 
-    // Allow AJAX & cron
-    if (wp_doing_ajax() || wp_doing_cron()) {
-        return;
-    }
-    
-    // Allow static content (uploads, plugins, themes)
-    if (strpos($request_uri, '/wp-content/') === 0) {
-        return;
-    }
-
-
-    // ---- REDIRECT ----
-
-    wp_redirect(HRAM_FRONTEND_URL. $request_uri, 301);
+    wp_redirect($new_url, 301);
     exit;
-}
+});

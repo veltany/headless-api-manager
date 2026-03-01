@@ -36,7 +36,6 @@ add_filter('the_content', function ($content) {
     // 7. Clean up empty <p> tags, including those with rogue <br> tags inside
     $content = preg_replace('/<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/i', '', $content);
 
-    hram_log(trim($content));
     return trim($content);
 
 }, 20); // <-- CHANGED TO PRIORITY 20

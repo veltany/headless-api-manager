@@ -15,6 +15,7 @@ add_action('template_redirect', function () {
         wp_doing_cron() ||                  // cron
         defined('REST_REQUEST') && REST_REQUEST ||  // REST API
         strpos($_SERVER['REQUEST_URI'], '/wp-json/') === 0 ||
+        strpos($_SERVER['REQUEST_URI'], '/wp-content/') === 0 ||
         strpos($_SERVER['REQUEST_URI'], '/wp-login.php') === 0
     ) {
         return;
